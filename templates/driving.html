@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>Mapbox Street View</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+      #street-view {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id='map'></div>
+    <div id='street-view'></div>
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1IjoibmlsYXktd2Vsb2dpY2FsIiwiYSI6ImNsZjZjMzRreDE1eG8zeW50YWplOHBvYTYifQ.Wk6TflXVfKBFSDBlxzpZHg';
+      var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-122.4194, 37.7749],
+        zoom: 14,
+        bearing: 0,
+        pitch: 0
+      });
+
+      var panorama = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false
+      });
+
+      map.on('click', function (e) {
+        var features = map.queryRenderedFeatures(e.point, { layers: ['road-label'] });
+        if (!features.length) {
+          return;
+        }
+        var feature = features[0];
+        var coordinates = feature.geometry.coordinates.slice();
+        var heading = map.getBearing();
+        var pitch = map.getPitch();
+        panorama.setLngLat(coordinates)
+                .setHTML('<img src="https://api.mapbox.com/v4/mapbox.streets/' + heading + ',' + pitch + ',' + coordinates.join(',') + ',0/400x400.png?access_token=' + mapboxgl.accessToken + '"/>')
+                .addTo(map);
+        document.getElementById('street-view').style.display = 'block';
+      });
+
+      panorama.on('close', function () {
+        document.getElementById('street-view').style.display = 'none';
+      });
+    </script>
+  </body>
+</html>

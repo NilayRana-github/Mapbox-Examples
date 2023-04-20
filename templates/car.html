@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Mapbox Directions with Moving Car</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css' rel='stylesheet' />
+
+    <!-- Mapbox Direction script and link  -->
+    <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.js'></script>
+
+    <!-- Bootstrap css -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <!-- Font awesome css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+        .car-icon {
+            width: 50px;
+            height: 50px;
+            background-image: url("https://www.flaticon.com/free-icons/cars");
+            background-size: cover;
+            transform-origin: center;
+        }
+    </style>
+</head>
+<body>
+    <div id='map'></div>
+    <script>
+        // Mapbox access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoibmlsYXktd2Vsb2dpY2FsIiwiYSI6ImNsZjZjMzRreDE1eG8zeW50YWplOHBvYTYifQ.Wk6TflXVfKBFSDBlxzpZHg';
+
+        // Initialize map
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-122.4194, 37.7749], // San Francisco coordinates
+            zoom: 12
+        });
+
+        // Initialize directions
+        var directions = new MapboxDirections({
+            accessToken: mapboxgl.accessToken,
+            unit: 'metric',
+            profile: 'mapbox/driving-traffic',
+            alternatives: false,
+            congestion: true,
+            placeholderOrigin: 'Choose starting point',
+            placeholderDestination: 'Choose destination'
+        });
+
+        // adding direction control
+        directions.setOrigin([77.587384, 12.917639]);
+        directions.setDestination([77.59278107, 12.9386553]);
+
+
+        // Add directions to the map
+        map.addControl(directions, 'top-left');
+
+        // Create a car marker
+        var carMarker = document.createElement('div');
+        carMarker.className = 'car-icon';
+
+        // Add the car marker to the map
+        var carMarkerElement = new mapboxgl.Marker(carMarker).setLngLat([-122.4194, 37.7749]).addTo(map);
+
+        // Animate the car marker along the direction route
+        directions.on('route', function(e) {
+            // Get the route
+            var route = e.route;
+
+            // Animate the car marker along the route
+            var i = 0;
+            var timer = setInterval(function() {
+                if (i < route[0].legs[0].steps.length) {
+                    // Get the current step and its start and end locations
+                    var currentStep = route[0].legs[0].steps[i];
+                    var currentStartLocation = currentStep.geometry.coordinates[0];
+                    var currentEndLocation = currentStep.geometry.coordinates[currentStep.geometry.coordinates.length - 1];
+
+                    // Calculate the bearing between the start and end locations
+                    var bearing = turf.bearing(turf.point(currentStartLocation), turf.point(currentEndLocation));
+
+                    // Rotate the car marker to the bearing
+                    carMarker.style.transform = 'rotate(' + bearing + 'deg)';
+
+                    // Move the car marker to the next location
+                    carMarkerElement.setLngLat(currentEndLocation);
+
+                    // Increment the step counter
+                    i++;
+                } else {
+                    // Clear the interval once the route is complete
+                    clearInterval(timer);
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

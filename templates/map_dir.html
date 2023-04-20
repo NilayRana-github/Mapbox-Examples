@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Mapbox</title>
+
+    <meta name="viewport" content="intial-scale=1,maximum-scale=1,user-scalable=no">
+
+	<script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
+
+    <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js'></script>
+
+	<link href='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css' rel='stylesheet'/>
+
+	<!-- Bootstrap css -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/7.2.0/turf.min.js"></script>
+
+	<style>
+
+		body{
+			margin: 0;
+			padding: 0;
+		}
+
+		#map {
+			position: fixed;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+		}
+
+		#menu {
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			background: #efefef;
+			padding: 10px;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.search-container{
+			position: absolute;
+		}
+
+		.controls{
+		    position: absolute;
+		    /*margin-top: 605px;*/
+		    bottom: 0;
+		    left: 0;
+		    background: #efefef;
+		    padding: 10px;
+		    font-family: 'Open Sans', sans-serif;
+		}
+
+	</style>
+
+</head>
+<body>
+	<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.js"></script>
+
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.0/mapbox-gl-directions.css" type="text/css">
+
+	<div id="map"></div>
+
+	<div class="controls">
+	  <button id="start-btn">Start</button>
+	  <button id="right-turn-btn">Right Turn</button>
+	  <button id="left-turn-btn">Left Turn</button>
+	  <button id="pause-btn">Pause</button>
+	  <button id="resume-btn" disabled>Resume</button>
+	  <button id="stop-btn">Stop</button>
+	</div>
+
+	<center>
+		<div id="menu">	
+			<input id="satellite-streets-v12" type="radio" name="rtoggle" value="satellite" checked="checked">
+			<!-- See a list of Mapbox-hosted public styles at -->
+			<!-- https://docs.mapbox.com/api/maps/styles/#mapbox-styles -->
+			<label for="satellite-streets-v12">satellite streets</label>
+			<input id="light-v11" type="radio" name="rtoggle" value="light">
+			<label for="light-v11">light</label>
+			<input id="dark-v11" type="radio" name="rtoggle" value="dark">
+			<label for="dark-v11">dark</label>
+			<input id="streets-v12" type="radio" name="rtoggle" value="streets">
+			<label for="streets-v12">streets</label>
+			<input id="outdoors-v12" type="radio" name="rtoggle" value="outdoors">
+			<label for="outdoors-v12">outdoors</label>
+		</div>
+	</center>
+
+
+<script>
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoibmlsYXktd2Vsb2dpY2FsIiwiYSI6ImNsZjZjMzRreDE1eG8zeW50YWplOHBvYTYifQ.Wk6TflXVfKBFSDBlxzpZHg';
+
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12', // Add satellite layer by default
+        // style: 'mapbox://styles/mapbox/light-v11',
+        center: [77.587384, 12.917639],
+        // center: [-110, 45],
+        zoom: 12, // Set a default zoom level
+        pitch: 0
+    });
+
+    // Add 3D building layer at zoom level 18
+    map.on('load', function () {
+
+    	directions.setOrigin([77.587384, 12.917639]);
+    	directions.setDestination([77.5935417, 12.9417255]);
+
+        map.addLayer({
+            id: '3d-building',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 20,
+            paint: {
+                'fill-extrusion-color': '#aaa',
+                'fill-extrusion-height': [
+                    'interpolate', ['linear'], ['zoom'],
+                    15, 0,
+                    15.05, ['get', 'height']
+                ],
+                'fill-extrusion-base': [
+                    'interpolate', ['linear'], ['zoom'],
+                    15, 0,
+                    15.05, ['get', 'min_height']
+                ],
+                'fill-extrusion-opacity': .6
+            }
+        });
+
+	});
+
+
+    // Add Fullscreen and Navigation controls
+    map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+
+    // map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+	// 3d view navigation
+	map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+    // Live Location control
+	map.addControl(new mapboxgl.GeolocateControl({
+	  positionOptions: {
+	      enableHighAccuracy: true
+	  },
+	  trackUserLocation: true,
+	  showUserHeading: true
+	}), 'top-right');
+
+    // direction code
+	const directions = new MapboxDirections({
+	  accessToken: mapboxgl.accessToken,
+	  unit: 'metric',
+	  profile: 'mapbox/driving',
+	  alternatives: false,
+	  interactive: false,
+	  congestion: true
+	});
+	map.addControl(directions, 'top-left');
+
+	///
+
+	// Initialize camera variables
+	let animationId;
+	let currentStep = 0;
+	let paused = false;
+
+	// Add event listeners to the buttons
+	document.getElementById('start-btn').addEventListener('click', () => {
+	  // Reset camera variables
+	  currentStep = 0;
+	  paused = false;
+	  // Start camera movement animation
+	  animateCamera();
+	});
+
+	document.getElementById('forward-btn').addEventListener('click', () => {
+	  // Move camera forward one step
+	  currentStep++;
+	});
+
+	document.getElementById('backward-btn').addEventListener('click', () => {
+	  // Move camera backward one step
+	  currentStep--;
+	  // If camera reaches the origin, reset currentStep to 0
+	  if (currentStep < 0) {
+	    currentStep = 0;
+	  }
+	});
+
+	document.getElementById('right-turn-btn').addEventListener('click', () => {
+	  // Turn camera to the right
+	  map.jumpTo({
+	    bearing: map.getBearing() + 10,
+	    duration: 1000,
+	  });
+	});
+
+	document.getElementById('left-turn-btn').addEventListener('click', () => {
+	  // Turn camera to the left
+	  map.jumpTo({
+	    bearing: map.getBearing() - 10,
+	    duration: 1000,
+	  });
+	});
+
+	document.getElementById('pause-btn').addEventListener('click', () => {
+	  // Pause camera movement animation
+	  paused = true;
+	  cancelAnimationFrame(animationId);
+	  // Disable pause button and enable resume button
+	  document.getElementById('pause-btn').disabled = true;
+	  document.getElementById('resume-btn').disabled = false;
+	});
+
+	document.getElementById('resume-btn').addEventListener('click',() => {
+		// Resume camera movement animation
+		paused = false;
+		animateCamera();
+		// Disable resume button and enable pause button
+		document.getElementById('pause-btn').disabled = false;
+		document.getElementById('resume-btn').disabled = true;
+	});
+
+	document.getElementById('stop-btn').addEventListener('click', () => {
+		// Reset camera variables and move camera back to origin
+		currentStep = 0;
+		paused = false;
+		map.flyTo({
+		center: directions.getOrigin(),
+		zoom: 13,
+		speed: 0.5,
+	});
+	// Disable resume button and enable pause button
+	document.getElementById('pause-btn').disabled = true;
+	document.getElementById('resume-btn').disabled = false;
+	});
+
+	// Define camera animation function
+	function animateCamera() {
+		// Get the route geometry from the directions plugin
+		const route = directions.getRoute();
+		const geometry = route.geometry;
+		// Get the current and next camera positions along the route
+		const { coordinates: currentPos } = turf.along(geometry, currentStep, { units: 'meters' });
+		const { coordinates: nextPos } = turf.along(geometry, currentStep + 1, { units: 'meters' });
+		// Calculate the bearing between the current and next positions
+		const bearing = turf.bearing(currentPos, nextPos);
+		// Move the camera to the current position and bearing
+		map.jumpTo({
+			center: currentPos,
+			bearing,
+		});
+		// If animation is not paused and there are more steps, increment currentStep and call animateCamera again
+		if (!paused && currentStep < route.distance) {
+			currentStep++;
+			animationId = requestAnimationFrame(animateCamera);
+		}
+	}
+
+</script>
+
+</body>
+</html>
+
+<!-- 	// const startBtn = document.getElementById('start-btn');
+	// const rightTurnBtn = document.getElementById('right-turn-btn');
+	// const leftTurnBtn = document.getElementById('left-turn-btn');
+	// const pauseBtn = document.getElementById('pause-btn');
+	// const resumeBtn = document.getElementById('resume-btn');
+	// const stopBtn = document.getElementById('stop-btn');
+ -->
+
+<!-- 	// Original code
+	function getDirections() {
+
+	  // Direction origin and destination lat,long
+  
+	  directions.setOrigin([77.587384, 12.917639]);
+	  directions.setDestination([77.5935417, 12.9417255]);
+
+	  // When the route is calculated, rotate the camera towards the destination
+	  directions.on('route', function(event) {
+	    if (event.route && event.route[0] && event.route[0].legs && event.route[0].legs[0]) {
+	      const start = event.route[0].legs[0].steps[0].maneuver.location;
+	      const end = event.route[0].legs[0].steps[event.route[0].legs[0].steps.length - 1].maneuver.location;
+	      const bearing = turf.bearing(
+	        turf.point([start[0], start[1]]),
+	        turf.point([end[0], end[1]])
+	      );
+	      map.flyTo({
+	        center: start,
+	        zoom: 21,
+	        bearing: bearing,
+	        pitch: 90,
+	        speed: 10,
+	        curve: 1
+	      });
+
+	      let currentStep = 0;
+	      const steps = event.route[0].legs[0].steps;
+
+	      const moveAlongPath = function() {
+	        const step = steps[currentStep];
+	        const end = step.maneuver.location;
+	        const distance = turf.distance(turf.point(start), turf.point(end));
+	        const duration = distance / (1 / 10000);
+	        map.easeTo({
+	          center: end,
+	          duration: duration,
+	          zoom: 30,
+	          pitch: 70,
+	          bearing: step.maneuver.bearing_after,
+	          easing: function(t) {
+	            return t;
+	          }
+	        });
+
+	        //updateLiveLocationMarker(end); // Update the live location marker's position
+
+	        currentStep++;
+	        if (currentStep < steps.length) {
+	          setTimeout(moveAlongPath, duration);
+	        } else {
+	          // If the current step is the last step, wait for a few seconds and then redirect to the next page
+	          setTimeout(function() {
+	            // window.location.href = "https://lh3.googleusercontent.com/yPVzBgXmvBwc66iU1wzJkDqjFJZuqRiCHb9Ol2N6cKDQkGoMa5Wh9fC4_C3hnr9IlpNxwgWnADk=m18?cpn=Q7DSXTpzKYOi4rNA";
+	            window.location.href = "https://planner5d.com/v?key=bd9f1769fc8188bdf2140cb40d4107ee&viewMode=3d";
+	          }, 20000);
+	        }
+	      };
+
+	      moveAlongPath();
+
+	    }
+	  });
+	}
+	document.getElementById('start-btn').addEventListener('click', getDirections);
+	// Original code end
+
+
+
+	function pauseAnimation() {
+	  isPaused = true;
+	  clearInterval(animationId);
+	  resumeBtn.disabled = false;
+	}
+
+	function resumeAnimation() {
+	  isPaused = false;
+	  startAnimation();
+	  resumeBtn.disabled = true;
+	}
+
+	function stopAnimation() {
+	  isPaused = true;
+	  clearInterval(animationId);
+	  map.flyTo({
+	    center: directions.getOrigin().geometry.coordinates,
+	    speed: 0.7,
+	    curve: 1.2,
+	    easing(t) {
+	      return t;
+	    }
+	  });
+	  resumeBtn.disabled = true;
+	}
+
+	startBtn.addEventListener('click', startAnimation);
+	rightTurnBtn.addEventListener('click', () => {
+	  map.rotateTo(map.getBearing() + 90, {
+	    duration: 1000
+	  });
+	});
+	leftTurnBtn.addEventListener('click', () => {
+	  map.rotateTo(map.getBearing() - 90, {
+	    duration: 1000
+	  });
+	});
+	pauseBtn.addEventListener('click', pauseAnimation);
+	resumeBtn.addEventListener('click', resumeAnimation);
+	stopBtn.addEventListener('click', stopAnimation);
+
+ -->
